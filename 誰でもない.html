@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TERMINAL_SYSTEM_ANALYSIS</title>
+    <style>
+        body, html {
+            background-color: #000;
+            color: #ff0000;
+            font-family: 'Courier New', monospace;
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            overflow: hidden;
+            display: flex; justify-content: center; align-items: center;
+        }
+
+        .crt-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.4) 0px, rgba(0,0,0,0.4) 1px, transparent 2px);
+            pointer-events: none; z-index: 100;
+        }
+
+        .terminal-container {
+            filter: blur(0.7px) contrast(1.1);
+            width: 100%; height: 100%;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        .screen { display: none; flex-direction: column; align-items: center; width: 95%; }
+        .active { display: flex; }
+
+        .ascii-main {
+            white-space: pre; font-size: 0.5vw; line-height: 1;
+            color: #a00000; margin-bottom: 20px;
+            text-shadow: 0 0 5px #ff000080;
+        }
+
+        .ascii-side {
+            position: absolute; bottom: 20px; right: 20px;
+            white-space: pre; font-size: 8px; line-height: 1.1;
+            color: #ff0000; z-index: 10;
+            text-shadow: 0 0 10px #ff0000;
+            opacity: 0.9;
+        }
+
+        .sys-logs {
+            position: absolute; left: 30px; top: 30px;
+            text-align: left; font-size: 14px; opacity: 0.8;
+            z-index: 20;
+        }
+        
+        /* JAPANESE TEXT TOP LEFT */
+        .japanese-text {
+            position: absolute; left: 30px; top: 120px;
+            color: #ff0000; font-size: 16px; opacity: 0.6;
+            line-height: 1.5; z-index: 20;
+            max-width: 300px;
+        }
+
+        .btn-ui {
+            background: #1a0000; color: #ff0000;
+            border: 1px solid #ff0000; padding: 15px 30px;
+            font-family: inherit; cursor: pointer;
+            text-transform: uppercase; margin-top: 20px;
+            font-weight: bold; box-shadow: 0 0 5px #ff000055;
+        }
+        .btn-ui:hover { background: #ff0000; color: #000; }
+
+        .result-date { font-size: 60px; color: #ff0000; margin: 20px 0; text-shadow: 0 0 15px #ff0000; }
+        .result-reason { font-size: 20px; color: #ff5555; letter-spacing: 2px; }
+
+        /* SCROLLING LOGS WRAPPER - STOPS BEFORE CHARACTER ART */
+        .log-ticker-wrap {
+            position: absolute; bottom: 0; left: 0; right: 200px; /* Adjusted right margin to avoid character */
+            width: auto; overflow: hidden; height: 30px;
+            background: rgba(255, 0, 0, 0.05); border-top: 1px solid rgba(255, 0, 0, 0.3);
+            white-space: nowrap; box-sizing: border-box;
+        }
+        .log-ticker-content {
+            display: inline-block; padding: 5px 0;
+            animation: ticker 40s linear infinite;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        @keyframes flicker { 0% { opacity: 0.98; } 50% { opacity: 1; } 100% { opacity: 0.99; } }
+        .flicker-effect { animation: flicker 0.1s infinite; }
+    </style>
+</head>
+<body>
+
+<div class="crt-overlay"></div>
+
+<div class="terminal-container flicker-effect">
+    <div class="sys-logs">
+        <div id="log-date"></div>
+        <div id="log-time"></div>
+        <div id="log-node"></div>
+    </div>
+    
+    <!-- JAPANESE TEXT -->
+    <div class="japanese-text">
+        これは人類補完計画に関する機密情報です。エヴァンゲリオン零号機、弐号機、初号機の起動シーケンスログを分析中。機密レベル：トップシークレット。
+        そんなことするべきじゃなかったんだよ、分かるだろ？   必要なし   必要なし  必要なし  必要なし 必要なし 
+    </div>
+
+    <!-- SCREEN 1: MAIN -->
+    <div id="scr1" class="screen active">
+        <div class="ascii-main">
+⣿⣿⣿⣿⣿⣷⣿⣿⣿⡅⡹⢿⠆⠙⠋⠉⠻⠿⣿⣿⣿⣿⣿⣿⣮⠻⣦⡙⢷⡑⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣌⠡⠌⠂⣙⠻⣛⠻⠷⠐⠈⠛⢱⣮⣷⣽⣿
+⣿⣿⣿⣿⡇⢿⢹⣿⣶⠐⠁⠀⣀⣠⣤⠄⠀⠀⠈⠙⠻⣿⣿⣿⣦⣵⣌⠻⣷⢝⠦⠚⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢟⣻⣿⣊⡃⠀⣙⠿⣿⣿⣿⣎⢮⡀⢮⣽⣿⣿
+⢿⣿⣿⣿⣧⡸⡎⡛⡩⠖⠀⣴⣿⣿⣿⠀⠀⠀⠀⠸⠇⠀⠙⢿⣿⣿⣿⣷⣌⢷⣑⢷⣄⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣫⠶⠛⠉⠀⠁⠀⠈⠈⠀⠠⠜⠻⣿⣆⢿⣼⣿⣿⣿
+⢐⣿⣿⣿⣿⣧⢧⣧⢻⣦⢀⣹⣿⣿⣿⣇⠀⠄⠀⠀⠀⡀⠀⠈⢻⣿⣿⣿⣿⣷⣝⢦⡹⠷⡙⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠈⠁⠀⠀⠀⠁⠀⠀⠀⠱⣶⣄⡀⠀⠈⠛⠜⣿⣿⣿⣿
+⠀⠊⢫⣿⣏⣿⡌⣼⣄⢫⡌⣿⣿⣿⣿⣿⣦⡈⠲⣄⣤⣤⡡⢀⣠⣿⣿⣿⣿⣿⣿⣷⣼⣍⢬⣦⡙⣿⣿⣿⣿⣿⣯⢁⡄⠀⡀⡀⠀⠄⢈⣠⢪⠀⣿⣿⣿⣦⠀⢉⢂⠹⡿⣿⣿
+⠀⠀⠄⢹⢃⢻⣟⠙⣿⣦⠱⢻⣿⣿⣿⣿⣿⣿⣷⣬⣍⣭⣥⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⡙⢿⣼⡿⣿⣿⣿⣿⣿⣷⣄⠘⣱⢦⣤⡴⡿⢈⣼⣿⣿⣿⣇⣴⣶⣮⣅⢻⣿⡏
+⠀⠀⠈⠹⣇⢡⢿⡆⠻⣿⣷⠀⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣍⡻⣿⣟⣻⣿⣿⣿⣿⣷⣦⣥⣬⣤⣴⣾⣿⣿⣿⣿⣷⣿⣿⣿⣿⣷⡜⠃
+⠀⠀⠀⢀⣘⠈⢂⠃⣧⡹⣿⣷⡄⠙⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣮⣅⡙⢿⣟⠿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠋⡕⠂
+⠀⠀⠀⠀⠀⠀⠛⢷⣜⢷⡌⠻⣿⣿⣦⣝⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣯⣹⣷⣦⣹⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠉⠃
+        </div>
+        <button class="btn-ui" onclick="changeScreen(2)">GET EXPIRATION DATA</button>
+    </div>
+
+    <!-- SCREEN 2: CONFIRMATION -->
+    <div id="scr2" class="screen">
+        <div style="font-size: 28px; letter-spacing: 5px;">CONFIRM INQUIRY?</div>
+        <div class="ascii-main" style="margin-top:20px; opacity: 0.6;">
+⣈⣽⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢘⣿⣿
+⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⣿
+⣯⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡻
+⣿⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐
+⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⡟⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⢰⢧⠀⠀⢸⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠸⠀⠀⠀⠀⠀⠀⠀⠀⡇⢸⡘⡄⠀⢨⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣼⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⢧⢸⣷⡡⠀⡀⣯⢆⠀⠀⠀⠀⠀⠀⡇⠀⠀⠀⠂⠀⣀⠀⢸⡿⠿⠀⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠷⠘⠦⢀⡑⠇⢻⣯⣂⡀⠀⣶⠀⢠⡗⠇⠀⠀⠀⠰⠟⢀⣵⠾⠗⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⣤⣄⠄⠀⠉⠲⢠⣍⣓⠉⠀⢹⠀⣸⡻⢡⠀⠀⢠⣶⢋⠊⠋⠀⠀⠀⠀⢠⠆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⢠⠀⠲⣄⡸⣿⣧⠀⠀⠀⠀⠙⢻⣿⣵⡙⣇⢿⣿⣦⣴⣷⣿⢟⣥⣶⣇⠀⠀⠀⠀⢈⡴⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⡄⠻⣿⣦⣯⣇⣴⣴⣶⣾⣶⣿⣿⣿⡼⣿⣿⣿⣿⣿⣷⣿⣯⣯⣇⣤⣠⣤⣶⡼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠘⠀⠈⠀⠹⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠟⡡⠂⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⡎⠀⠀⣀⠐⠀⠀⠀⠈⠀⠀⠀⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠛⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⣴⣶⣿⣿⠇⠀⠀⠀⠀⠀⠀⠀⠈⢳⣽⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣛⠛⠁⠀⠀⠀⠀⢀⠀⠀⠀⠀⠀⠘⢿
+⣿⣿⣿⠇⠠⣀⠀⣠⡾⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⠁⠀⠀⠀⠀⣦⡠⣀⠀⠀⠀⠀⠀⠀
+⣿⣿⣟⣴⣿⡟⣼⣿⡿⠀⠀⠀⠀⠀⠀⢀⠈⠙⠿⣿⣿⣿⣿⣿⣭⣟⣿⣿⣿⣿⣿⡿⠟⠉⣠⡀⠀⣴⣦⡀⠀⣿⣿⣮⣻⣿⣶⣶⣾⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣛⣥⣴⣶⢏⣠⣴⣾⢇⣤⣾⣷⣦⠉⠛⢿⣿⣿⣿⣿⣿⣿⠟⠋⠀⠀⢠⣿⣿⣄⢸⣿⣷⣦⡘⣿⣿⣾⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣿⣿⣿⣿⣿⣿⠆⢀⠀⠈⠉⠉⠉⠁⠀⠀⠀⠀⠀⣼⣿⣿⣿⣧⣻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣅⢕⠔⢄⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⢟⣿⣮⢷⣕⣄⠢⡀⡀⠀⠀⠀⠀⣸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠿⠟⠁⢀⣿⣿⣿⣷⣿⣮⢳⣝⢦⡂⡐⠀⠀⠏⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+⣿⣿⣿⣿⣿⣿⣿⣿⣿⠿⠟⢋⠉⠁⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⣽⣷⣇⠀⢰⠀⠀⠋⠛⢿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
+        </div>
+        <button class="btn-ui" onclick="changeScreen(3)">YES / PROCEED</button>
+    </div>
+
+    <!-- SCREEN 3: RESULT -->
+    <div id="scr3" class="screen">
+        <div style="opacity: 0.7;">DEATH_SCHEDULE_RECORDS:</div>
+        <div class="result-date" id="res-date">00 / 00 / 0000</div>
+        <div class="result-reason" id="res-cause">CAUSE: UNKNOWN_ERROR</div>
+        <button class="btn-ui" onclick="changeScreen(1)" style="margin-top:40px;">BACK TO START</button>
+    </div>
+
+    <!-- SIDE CHARACTER -->
+    <div class="ascii-side">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣀⣤⣤⣤⣄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣤⣴⣿⣿⣿⡿⢿⣿⣿⣿⣭⣵⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+   ⠀誰でもない⠀⠀⠀⠀⠀⠀⠀⠀⣸⡿⣿⣿⣿⡿⡛⢻⣿⠫⢿⢿⣿⣿⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣤⢿⡇⣷⣻⣽⣿⣿⣦⡋⣿⡟⢿⣻⣿⣷⣹⣿⢿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡰⣿⣞⣿⠇⣵⣛⢮⢮⢟⡯⣷⢖⢽⢿⣿⣾⠗⢿⣜⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣿⡜⣿⡏⠷⣃⠻⠬⢧⣵⡑⡟⣷⢍⢿⣻⣿⣿⡟⣿⣾⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡟⣟⡪⢿⣯⢤⣾⣤⡿⣐⢟⢎⣺⡻⣾⡩⢿⡇⣿⣻⢛⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠈⠊⢠⢛⡞⣿⣿⣃⣱⣻⢟⣴⠿⡥⡾⣭⢡⣿⣿⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢎⡿⣿⣿⣿⣫⣟⢁⣖⠽⡾⣺⢣⣏⣟⣿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⠈⢣⢛⣖⣯⣾⣫⣿⣗⣨⣠⢃⠩⠐⠜⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⢑⢽⡋⠿⠐⠛⠃⠉⠀⠙⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⣴⣾⣿⣿⣷⣶⣤⢲⣶⣿⣶⣶⣶⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⣿⠟⢉⢻⣿⣿⣯⢻⣻⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⣿⣿⣿⡧⣂⣼⣿⢩⣷⡾⣏⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣿⣿⣿⣿⣿⣿⡿⣼⣿⢇⣿⣿⣿⣿⣿⡿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣬⢿⣿⣿⣿⡿⠋⠁⠈⠻⣸⣿⣿⣿⣽⣿⣟⢩⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣾⣿⡿⠻⣿⣿⣯⠀⠀⠀⠀⢠⡟⣷⣿⡎⢂⣍⠻⡝⣼⡆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⡿⣻⠐⡿⢿⣿⣧⠀⠀⠀⣾⢰⢿⣿⢡⣿⡇⣿⡿⢿⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢿⡿⣿⣿⡆⢦⣞⣿⡿⠀⠀⠀⡟⣾⣿⡟⣸⡟⢸⡟⢠⡞⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣈⣹⣿⠛⢓⣃⣽⣿⠁⠀⠀⣼⣿⣿⣿⠇⣿⢃⡿⠁⠘⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠐⣿⣿⣷⣿⣿⣿⡟⠋⠁⠀⠀⣴⣿⣿⣧⣿⣶⣦⡼⠁⠀⠀⢹⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢋⠷⣿⣿⣶⣿⣷⠀⢀⠀⢰⣿⡿⣿⣟⣿⡿⠋⠀⠀⠀⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⠀⠀⠀⠀⢿⡹⣿⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⣿⣿⡿⠀⠀⠀⠀⣾⠄⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢰⣿⣿⣿⣿⣯⡇⠀⠀⠀⣼⣿⣣⠀⠀⠀⠀⠀⠀⠀⠀⠀⣐⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣞⢿⣿⣿⣿⡇⠀⢁⠀⣿⣿⣯⣞⣷⣦⣄⡀⠀⠀⠀⣾⣿⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣸⣿⣿⣟⣿⣿⣿⣧⠀⠸⠀⣿⣿⣿⣿⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿⣾⣿⣿⣿⡆⠀⢠⣿⣿⣿⣿⣿⣿⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⠀⣼⣿⣿⣿⣿⣿⣿⣿⣳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢸⣿⣿⣿⣿⣿⣿⣿⡿⠟⠻⣰⣿⣿⣿⣿⢹⣿⣿⣿⣷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⣿⣿⣿⠿⠋⠀⢀⣤⣆⣿⣿⣿⣿⡾⣿⣾⢹⣿⣧⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠃</div>
+</div>
+
+<div class="log-ticker-wrap">
+    <div class="log-ticker-content" id="ticker-logs">
+        [SYS] Initializing core modules... [SCANNING_NETWORK] 192.168.1.1 OK... [ACCESSING] Database records... [STATUS] Connection secured... [LOG] User "guest" logged in... [WARNING] System temperature nominal... [PROCESSING] Request 4B5A... [DECRYPTING] Neural link data... [SUCCESS] Operation complete. [LOG] Memory usage at 45%... [ALERT] External node ping failed... [DIAGNOSTIC] Running system check... [LOG] Data transfer started... [FILE] "death_data.enc" acquired...
+    </div>
+</div>
+
+<script>
+    const reasons = ["TOTAL_SYSTEM_COLLAPSE", "NEURAL_PATHWAY_BREACH", "SUDDEN_BIOLOGICAL_HALT", "CRITICAL_ORGAN_FAILURE", "UNKNOWN_TERMINATION"];
+
+    function changeScreen(n) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById('scr' + n).classList.add('active');
+        if(n === 3) {
+            const year = 2030 + Math.floor(Math.random() * 50);
+            const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+            const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+            document.getElementById('res-date').innerText = month + " / " + day + " / " + year;
+            document.getElementById('res-cause').innerText = "CAUSE: " + reasons[Math.floor(Math.random() * reasons.length)];
+        }
+    }
+
+    function refreshSysInfo() {
+        const d = new Date();
+        document.getElementById('log-date').innerText = "DATE: " + d.toLocaleDateString('en-US');
+        document.getElementById('log-time').innerText = "TIME: " + d.toLocaleTimeString('en-US');
+        document.getElementById('log-node').innerText = "NODE: " + Math.random().toString(36).substr(2, 6).toUpperCase();
+    }
+    
+    function addRandomLog() {
+        const logs = document.getElementById('ticker-logs');
+        const newLog = "[LOG] Processing data packet " + Math.random().toString(36).substr(2, 5).toUpperCase() + "... ";
+        logs.innerHTML += newLog;
+    }
+
+    setInterval(refreshSysInfo, 1000);
+    setInterval(addRandomLog, 4000);
+    refreshSysInfo();
+</script>
+
+</body>
+</html>
